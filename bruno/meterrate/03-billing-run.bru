@@ -1,0 +1,20 @@
+meta {
+  name: Run billing for 2026-03
+  type: http
+  sequence: 3
+}
+post {
+  url: {{baseUrl}}/billing/run
+  body: json
+  auth: none
+}
+headers {
+  Content-Type: application/json
+}
+body: json
+{
+  "period": "2026-03"
+}
+assert {
+  res.status: 201
+}

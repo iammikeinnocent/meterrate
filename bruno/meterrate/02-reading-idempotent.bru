@@ -1,0 +1,23 @@
+meta {
+  name: Submit reading with idempotency key
+  type: http
+  sequence: 2
+}
+post {
+  url: {{baseUrl}}/readings
+  body: json
+  auth: none
+}
+headers {
+  Content-Type: application/json
+  Idempotency-Key: bruno-reading-001
+}
+body: json
+{
+  "meterSerial": "WM-001",
+  "readOn": "2026-03-05",
+  "kwh": 8
+}
+assert {
+  res.status: 201
+}

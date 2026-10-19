@@ -1,0 +1,9 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: meterrate
+      POSTGRES_PASSWORD: meterrate
+      POSTGRES_DB: meterrate
+    ports:
+      - '5433:5432'

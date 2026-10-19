@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Compile · Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 24
+          cache: maven
+      - run: mvn -B -DskipTests package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jar
+          path: target/meterrate-*.jar
+
+  test:
+    name: Unit + Testcontainers integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 24
+          cache: maven
+      - run: mvn -B test
+      - name: Upload surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+
+  bruno:
+    name: Bruno API smoke
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Bruno CLI
+        run: npm install -g @usebruno/cli
+      - name: Start stack
+        run: |
+          docker compose up -d postgres
+          JAR=$(ls target/meterrate-*.jar)
+          # jar artifact from build job is not shared across jobs; rebuild quickly
+          mvn -B -DskipTests package -q
+          nohup java -jar $JAR --server.port=8080 > app.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080/actuator/health >/dev/null 2>&1 && break || sleep 2
+          done
+      - name: Run collection
+        run: cd bruno && bru run meterrate --env local
