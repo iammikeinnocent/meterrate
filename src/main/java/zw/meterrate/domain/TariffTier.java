@@ -1,6 +1,7 @@
 package zw.meterrate.domain;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.math.BigDecimal;
 
 @Entity
@@ -12,6 +13,7 @@ public class TariffTier {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "tariff_id")
+    @JsonIgnore
     private Tariff tariff;
 
     /** Upper bound of this band in kWh; null = top band with no upper bound. */

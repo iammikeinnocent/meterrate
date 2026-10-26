@@ -12,7 +12,7 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.List;
 
-/** Accounts, meters and tiered tariffs — the rating engine's reference data. */
+/** Accounts, meters and tiered tariffs: the rating engine's reference data. */
 @RestController
 public class CatalogController {
 
@@ -82,6 +82,9 @@ public class CatalogController {
             entity.setRatePerKwh(tier.ratePerKwh());
             return entity;
         }).toList();
+        for (int i = 0; i < tiers.size(); i++) {
+            tiers.get(i).setSequence(i + 1);
+        }
         tariff.setTiers(new java.util.ArrayList<>(tiers));
         // enforce: exactly one top band (null upTo), bands ascending
         var topBands = tariff.orderedTiers().stream().filter(t -> t.getUpToKwh() == null).count();

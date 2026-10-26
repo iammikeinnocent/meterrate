@@ -10,7 +10,7 @@ import java.math.RoundingMode;
 /**
  * Tiered rating: consumption is charged band-by-band against the tariff's
  * ordered tiers. A band with a null upper bound is the top band. Rounding is
- * HALF_UP to cents — the same convention the invoice table stores.
+ * HALF_UP to cents, the same convention the invoice table stores.
  */
 @Component
 public class RatingEngine {

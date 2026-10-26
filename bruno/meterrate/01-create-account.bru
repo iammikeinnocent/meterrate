@@ -1,19 +1,18 @@
 meta {
-  name: Run billing for 2026-03
+  name: Create account
   type: http
-  sequence: 3
+  sequence: 1
 }
 post {
-  url: {{baseUrl}}/billing/run
+  url: {{baseUrl}}/accounts
   body: json
   auth: none
 }
 headers {
   Content-Type: application/json
 }
-body: json
-{
-  "period": "2026-03"
+body:json {
+  {"name": "John Doe", "address": "123 Water St"}
 }
 assert {
   res.status: 201

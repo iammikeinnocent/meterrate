@@ -14,6 +14,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Map;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -37,25 +38,43 @@ class MeterRateIntegrationTest {
     @Autowired
     TestRestTemplate rest;
 
+    @Autowired
+    org.springframework.jdbc.core.JdbcTemplate jdbc;
+
     private String base() {
         return "http://localhost:" + port;
     }
 
+    private final Map<Long, String> serials = new java.util.HashMap<>();
+
     @BeforeEach
     void seed() {
+        jdbc.execute("DELETE FROM invoices");
+        jdbc.execute("DELETE FROM readings");
+        jdbc.execute("DELETE FROM meters");
+        jdbc.execute("DELETE FROM idempotency_keys");
+        jdbc.execute("DELETE FROM tariff_tiers");
+        jdbc.execute("DELETE FROM tariffs");
+        jdbc.execute("DELETE FROM accounts");
         // tariff effective 2026-01-01: 6 @ 0.42, 6-20 @ 0.75, 20+ @ 1.10
+        var topBand = new java.util.HashMap<String, Object>();
+        topBand.put("upToKwh", null);
+        topBand.put("ratePerKwh", 1.10);
+        topBand.put("sequence", 3);
         rest.postForEntity(base() + "/tariffs", Map.of(
             "name", "Residential 2026",
             "effectiveFrom", "2026-01-01",
             "tiers", java.util.List.of(
                 Map.of("upToKwh", 6, "ratePerKwh", 0.42, "sequence", 1),
                 Map.of("upToKwh", 20, "ratePerKwh", 0.75, "sequence", 2),
-                Map.of("upToKwh", null, "ratePerKwh", 1.10, "sequence", 3)
+                topBand
             )), Map.class);
         var account = rest.postForEntity(base() + "/accounts", Map.of("name", "Moyo household", "address", "12 Josphat Rd"), Map.class);
         Long accountId = ((Number) account.getBody().get("id")).longValue();
-        rest.postForEntity(base() + "/meters", Map.of("serial", "WM-001", "accountId", accountId), Map.class);
-        rest.postForEntity(base() + "/meters", Map.of("serial", "WM-002", "accountId", accountId), Map.class);
+        for (var serial : List.of("WM-001", "WM-002")) {
+            var meter = rest.postForEntity(base() + "/meters", Map.of("serial", serial, "accountId", accountId), Map.class);
+            serials.put(((Number) meter.getBody().get("id")).longValue(), serial);
+        }
     }
 
     @Test
@@ -69,15 +88,17 @@ class MeterRateIntegrationTest {
         var run = rest.postForEntity(base() + "/billing/run", Map.of("period", "2026-03"), Map.class);
         assertEquals(201, run.getStatusCode().value());
 
-        var invoices = rest.getForEntity(base() + "/invoices?period=2026-03", Map.class).getBody();
-        assertNotNull(invoices);
-        assertTrue(invoices.toString().contains("7.02"), "WM-001 invoice amount: " + invoices);
-        assertTrue(invoices.toString().contains("1.26"), "WM-002 invoice amount: " + invoices);
+        var invoices = getInvoices("2026-03");
+        assertEquals(2, invoices.size());
+        assertEquals(7.02, ((Number) invoices.get("WM-001").get("amount")).doubleValue(), 0.0001);
+        assertEquals(1.26, ((Number) invoices.get("WM-002").get("amount")).doubleValue(), 0.0001);
 
-        // re-running the period replaces invoices — never double-charges
+        // re-running the period replaces invoices, never double-charges
         rest.postForEntity(base() + "/billing/run", Map.of("period", "2026-03"), Map.class);
-        var after = rest.getForEntity(base() + "/invoices?period=2026-03", Map.class).getBody();
-        assertEquals(invoices.toString(), after.toString());
+        var after = getInvoices("2026-03");
+        assertEquals(2, after.size());
+        assertEquals(invoices.get("WM-001").get("amount"), after.get("WM-001").get("amount"));
+        assertEquals(invoices.get("WM-002").get("amount"), after.get("WM-002").get("amount"));
     }
 
     @Test
@@ -117,5 +138,14 @@ class MeterRateIntegrationTest {
     private org.springframework.http.ResponseEntity<String> postReading(String serial, String day, double kwh) {
         return rest.postForEntity(base() + "/readings",
             Map.of("meterSerial", serial, "readOn", day, "kwh", kwh), String.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Map<String, Object>> getInvoices(String period) {
+        var response = rest.getForEntity(base() + "/invoices?period=" + period, List.class);
+        return ((List<Map<String, Object>>) response.getBody()).stream()
+            .collect(java.util.stream.Collectors.toMap(
+                invoice -> serials.get(((Number) invoice.get("meterId")).longValue()),
+                invoice -> invoice));
     }
 }

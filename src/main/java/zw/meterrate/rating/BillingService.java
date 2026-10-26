@@ -14,6 +14,9 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 @Service
 public class BillingService {
 
@@ -22,6 +25,9 @@ public class BillingService {
     private final TariffRepository tariffRepository;
     private final InvoiceRepository invoiceRepository;
     private final RatingEngine ratingEngine;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public BillingService(MeterRepository meterRepository,
                           ReadingRepository readingRepository,
@@ -37,7 +43,7 @@ public class BillingService {
 
     /**
      * Recomputes every invoice for the period. Re-running a period REPLACES
-     * its invoices inside one transaction — billing is idempotent by
+     * its invoices inside one transaction; billing is idempotent by
      * construction, so retried runs never double-charge.
      */
     @Transactional
@@ -51,6 +57,7 @@ public class BillingService {
             .orElseThrow(() -> new IllegalStateException("no tariff effective on or before " + from));
 
         invoiceRepository.deleteByPeriod(period);
+        entityManager.flush();
 
         var invoices = new ArrayList<Invoice>();
         var skipped = new ArrayList<SkippedMeter>();
@@ -78,7 +85,7 @@ public class BillingService {
     public record BillingRun(String period, Long tariffId, List<Invoice> invoices, List<SkippedMeter> skipped) {}
     public record SkippedMeter(String serial, String reason) {}
 
-    /** Meter consumption for a period — used by the reporting endpoint. */
+    /** Meter consumption for a period, used by the reporting endpoint. */
     public BigDecimal consumptionForPeriod(Long meterId, String period) {
         var yearMonth = YearMonth.parse(period);
         var from = LocalDate.from(yearMonth.atDay(1));

@@ -1,0 +1,19 @@
+meta {
+  name: Re-run billing for 2026-03 (idempotent - replaces invoices)
+  type: http
+  sequence: 7
+}
+post {
+  url: {{baseUrl}}/billing/run
+  body: json
+  auth: none
+}
+headers {
+  Content-Type: application/json
+}
+body:json {
+  {"period": "2026-03"}
+}
+assert {
+  res.status: 201
+}

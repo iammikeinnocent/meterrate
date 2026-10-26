@@ -1,0 +1,19 @@
+meta {
+  name: Create tariff with tiers
+  type: http
+  sequence: 3
+}
+post {
+  url: {{baseUrl}}/tariffs
+  body: json
+  auth: none
+}
+headers {
+  Content-Type: application/json
+}
+body:json {
+  {"name": "Residential 2026", "effectiveFrom": "2026-01-01", "tiers": [{"upToKwh": 6, "ratePerKwh": 0.42}, {"upToKwh": 20, "ratePerKwh": 0.75}, {"upToKwh": null, "ratePerKwh": 1.10}]}
+}
+assert {
+  res.status: 201
+}

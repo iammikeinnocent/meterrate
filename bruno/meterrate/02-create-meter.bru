@@ -1,0 +1,19 @@
+meta {
+  name: Create meter
+  type: http
+  sequence: 2
+}
+post {
+  url: {{baseUrl}}/meters
+  body: json
+  auth: none
+}
+headers {
+  Content-Type: application/json
+}
+body:json {
+  {"serial": "WM-001", "accountId": 1}
+}
+assert {
+  res.status: 201
+}

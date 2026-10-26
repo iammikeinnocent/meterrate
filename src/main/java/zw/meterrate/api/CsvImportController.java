@@ -14,9 +14,9 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Batch CSV reading import with ROW-LEVEL validation: valid rows are
- * imported, invalid rows are reported individually — a single bad line never
- * poisons the batch, mirroring the data-import behaviour of real utility ops.
+ * Batch CSV reading import with row-level validation: valid rows are
+ * imported, invalid rows are reported individually, so one bad line
+ * never fails the whole batch.
  *
  * Expected row format: meterSerial,YYYY-MM-DD,kwh
  */

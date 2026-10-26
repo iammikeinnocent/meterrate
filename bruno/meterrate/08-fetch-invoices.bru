@@ -1,0 +1,15 @@
+meta {
+  name: Fetch invoices for 2026-03
+  type: http
+  sequence: 8
+}
+get {
+  url: {{baseUrl}}/invoices?period=2026-03
+  auth: none
+}
+assert {
+  res.status: 200
+  res.body.length: 1
+  res.body[0].meterId: 1
+  res.body[0].period: "2026-03"
+}

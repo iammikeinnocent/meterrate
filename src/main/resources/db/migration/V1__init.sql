@@ -39,7 +39,7 @@ CREATE TABLE readings (
 CREATE TABLE invoices (
     id BIGSERIAL PRIMARY KEY,
     meter_id BIGINT NOT NULL REFERENCES meters(id),
-    period CHAR(7) NOT NULL, -- YYYY-MM
+    period VARCHAR(7) NOT NULL, -- YYYY-MM
     kwh NUMERIC(12,3) NOT NULL,
     amount NUMERIC(12,2) NOT NULL,
     computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
